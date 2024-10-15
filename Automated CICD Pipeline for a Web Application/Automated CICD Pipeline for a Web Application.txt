@@ -1,0 +1,53 @@
+pipeline {
+    agent any
+    
+    environment {
+        GIT_REPO = 'https://github.com/your-repo'
+        DEPLOY_SERVER = 'your-deployment-server'
+        DEPLOY_USER = 'your-user'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: "${GIT_REPO}"
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building the application...'
+                // Add build steps for your application (e.g., npm build, Maven build, etc.)
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                // Run unit tests here (e.g., npm test, JUnit, etc.)
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying the application...'
+                // Script to deploy code to your server (e.g., using SSH or AWS CLI)
+                sh 'scp -r * ${DEPLOY_USER}@${DEPLOY_SERVER}:/path/to/deploy'
+            }
+        }
+    }
+
+    post {
+        success {
+            mail to: 'team@example.com',
+                 subject: "Build Successful",
+                 body: "The build was successful."
+        }
+
+        failure {
+            mail to: 'team@example.com',
+                 subject: "Build Failed",
+                 body: "The build failed."
+        }
+    }
+}
