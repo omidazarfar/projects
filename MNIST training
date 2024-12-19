@@ -1,0 +1,93 @@
+import torch
+import numpy as np
+from torch import nn
+from torchvision import datasets as dsets
+from torchvision import transforms
+from matplotlib import pyplot as plt
+
+transform = transforms.Compose([
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))
+])
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+train_dataset = dsets.MNIST(root='./data', train=True, download=True, transform=transform)
+test_dataset = dsets.MNIST(root='./data', train=False, download=True, transform=transform)
+
+
+batch_size = 64
+train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False)
+
+class MyNet(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.flatten = nn.Flatten()
+
+        self.fc1 = nn.Linear(in_features=784, out_features= 512)
+        self.fc2 = nn.Linear(in_features=512, out_features=128)
+        self.fc3 = nn.Linear(in_features=128, out_features=10)
+
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+
+        x = self.flatten(x) 
+        x = self.fc1(x) 
+        x = self.relu(x) 
+        x = self.fc2(x) 
+        x = self.relu(x) 
+        x = self.fc3(x)
+        return x
+
+
+model = MyNet().to(device) 
+loss_fn = nn.CrossEntropyLoss() 
+optimizer = torch.optim.Adam(params=model.parameters(), lr= 0.001) 
+
+#training_loop
+
+def train(num_epochs):
+    for epoch in range(num_epochs):
+        total_loss = 0
+        total_correcct = 0
+        total = 0
+        for batch in train_loader:
+            inputs, labels = batch
+            inputs, labels = inputs.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = loss_fn(outputs, labels)
+            total_loss += loss.item() 
+            _, predicted = torch.max(outputs, 1) 
+            total_correcct += torch.sum(predicted.eq(labels))
+            total += inputs.shape[0]
+            loss.backward()
+            optimizer.step()
+
+        print(f"\n\n\n -------Epoch number: {epoch + 1} -- training loss: {total_loss} -- training accuracy:  \
+                {100 * total_correcct / total} -------\n\n\n")
+
+
+#test_loop
+
+def test():
+    total_correcct = 0
+    total = 0
+    model.eval()
+    for batch in test_loader:
+        inputs, labels = batch 
+        inputs, labels = inputs.to(device), labels.to(device)
+        outputs = model(inputs)
+        _, predicted = torch.max(outputs, 1)
+        total_correcct += torch.sum(predicted.eq(labels))
+        total += inputs.shape[0]
+    print(f"\n\n\n -------Test accuracy:  \
+                {100 * total_correcct / total} -------\n\n\n")
+
+
+
+train(4)
+
+test()
